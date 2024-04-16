@@ -85,12 +85,14 @@ class Backend:
         self._ffi = self._binding.ffi
         self._lib = self._binding.lib
         self._fips_enabled = rust_openssl.is_fips_enabled()
+        self._oqs_enabled = rust_openssl.is_oqs_enabled()
 
     def __repr__(self) -> str:
         return (
             f"<OpenSSLBackend(version: {self.openssl_version_text()}, "
             f"FIPS: {self._fips_enabled}, "
-            f"Legacy: {rust_openssl._legacy_provider_loaded})>"
+            f"Legacy: {rust_openssl._legacy_provider_loaded}), "
+            f"OQS: {rust_openssl._oqsprovider_loaded}>"
         )
 
     def openssl_assert(self, ok: bool) -> None:
@@ -102,6 +104,11 @@ class Backend:
         rust_openssl.enable_fips(rust_openssl._providers)
         assert rust_openssl.is_fips_enabled()
         self._fips_enabled = rust_openssl.is_fips_enabled()
+
+    def _enable_oqs(self) -> None:
+        rust_openssl.enable_oqs(rust_openssl._providers)
+        assert rust_openssl.is_oqs_enabled()
+        self._oqs_enabled = rust_openssl.is_oqs_enabled()
 
     def openssl_version_text(self) -> str:
         """
@@ -362,6 +369,15 @@ class Backend:
         return (
             rust_openssl.CRYPTOGRAPHY_OPENSSL_320_OR_GREATER
             and not self._fips_enabled
+        )
+
+    def mldsa65_supported(self) -> bool:
+        if self._fips_enabled:
+            return False
+        return (
+            rust_openssl.CRYPTOGRAPHY_OPENSSL_320_OR_GREATER
+            and not self._fips_enabled
+            and self._oqs_enabled
         )
 
     def _zero_data(self, data, length: int) -> None:
