@@ -67,9 +67,13 @@ fn _initialize_providers() -> CryptographyResult<LoadedProviders> {
         None
     };
     let _default = provider::Provider::load(None, "default")?;
-    let oqsprovider_result = provider::Provider::load(None, "oqsprovider");
-    let oqsprovider = if oqsprovider_result.is_ok() {
-        Some(oqsprovider_result?)
+    let load_oqs = env::var("CRYPTOGRAPHY_OPENSSL_OQS")
+        .map(|v| v != "0")
+        .unwrap_or(false);
+    let oqsprovider = if load_oqs {
+        let oqs_result = provider::Provider::load(None, "oqsprovider");
+        _provider_error("oqsprovider", oqs_result.is_ok())?;
+        Some(oqs_result?)
     } else {
         None
     };
