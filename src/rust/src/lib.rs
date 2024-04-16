@@ -48,10 +48,6 @@ fn is_fips_enabled() -> bool {
     cryptography_openssl::fips::is_enabled()
 }
 
-#[pyo3::prelude::pyfunction]
-fn is_oqs_enabled() -> bool {
-    cryptography_openssl::oqsprovider::is_enabled()
-}
 
 #[cfg(CRYPTOGRAPHY_OPENSSL_300_OR_GREATER)]
 fn _initialize_providers() -> CryptographyResult<LoadedProviders> {
@@ -100,14 +96,6 @@ fn _provider_error(provider_name: &str, success: bool) -> pyo3::PyResult<()> {
 fn enable_fips(providers: &mut LoadedProviders) -> CryptographyResult<()> {
     providers.fips = Some(provider::Provider::load(None, "fips")?);
     cryptography_openssl::fips::enable()?;
-    Ok(())
-}
-
-#[cfg(CRYPTOGRAPHY_OPENSSL_300_OR_GREATER)]
-#[pyo3::prelude::pyfunction]
-fn enable_oqs(providers: &mut LoadedProviders) -> CryptographyResult<()> {
-    providers.oqsprovider = Some(provider::Provider::load(None, "oqsprovider")?);
-    cryptography_openssl::oqsprovider::enable()?;
     Ok(())
 }
 
