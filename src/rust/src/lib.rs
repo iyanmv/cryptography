@@ -29,8 +29,8 @@ mod x509;
 struct LoadedProviders {
     legacy: Option<provider::Provider>,
     _default: provider::Provider,
-
     fips: Option<provider::Provider>,
+    oqsprovider: Option<provider::Provider>,
 }
 
 #[pyo3::prelude::pyfunction]
@@ -48,6 +48,11 @@ fn is_fips_enabled() -> bool {
     cryptography_openssl::fips::is_enabled()
 }
 
+#[pyo3::prelude::pyfunction]
+fn is_oqs_enabled() -> bool {
+    cryptography_openssl::oqsprovider::is_enabled()
+}
+
 #[cfg(CRYPTOGRAPHY_OPENSSL_300_OR_GREATER)]
 fn _initialize_providers() -> CryptographyResult<LoadedProviders> {
     // As of OpenSSL 3.0.0 we must register a legacy cipher provider
@@ -60,24 +65,32 @@ fn _initialize_providers() -> CryptographyResult<LoadedProviders> {
         .unwrap_or(true);
     let legacy = if load_legacy {
         let legacy_result = provider::Provider::load(None, "legacy");
-        _legacy_provider_error(legacy_result.is_ok())?;
+        _provider_error("legacy", legacy_result.is_ok())?;
         Some(legacy_result?)
     } else {
         None
     };
     let _default = provider::Provider::load(None, "default")?;
+    let oqsprovider_result = provider::Provider::load(None, "oqsprovider");
+    let oqsprovider = if oqsprovider_result.is_ok() {
+        Some(oqsprovider_result?)
+    } else {
+        None
+    };
     Ok(LoadedProviders {
         legacy,
         _default,
         fips: None,
+        oqsprovider,
     })
 }
 
-fn _legacy_provider_error(success: bool) -> pyo3::PyResult<()> {
+fn _provider_error(provider_name: &str, success: bool) -> pyo3::PyResult<()> {
     if !success {
-        return Err(pyo3::exceptions::PyRuntimeError::new_err(
-            "OpenSSL 3.0's legacy provider failed to load. This is a fatal error by default, but cryptography supports running without legacy algorithms by setting the environment variable CRYPTOGRAPHY_OPENSSL_NO_LEGACY. If you did not expect this error, you have likely made a mistake with your OpenSSL configuration."
-        ));
+        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+            "Failed to load '{}' provider. If you did not expect this error, you have likely made a mistake with your OpenSSL configuration.",
+            provider_name
+        )));
     }
     Ok(())
 }
@@ -87,6 +100,14 @@ fn _legacy_provider_error(success: bool) -> pyo3::PyResult<()> {
 fn enable_fips(providers: &mut LoadedProviders) -> CryptographyResult<()> {
     providers.fips = Some(provider::Provider::load(None, "fips")?);
     cryptography_openssl::fips::enable()?;
+    Ok(())
+}
+
+#[cfg(CRYPTOGRAPHY_OPENSSL_300_OR_GREATER)]
+#[pyo3::prelude::pyfunction]
+fn enable_oqs(providers: &mut LoadedProviders) -> CryptographyResult<()> {
+    providers.oqsprovider = Some(provider::Provider::load(None, "oqsprovider")?);
+    cryptography_openssl::oqsprovider::enable()?;
     Ok(())
 }
 
@@ -144,6 +165,11 @@ fn _rust(py: pyo3::Python<'_>, m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> py
             } else {
                 openssl_mod.add("_legacy_provider_loaded", false)?;
             }
+            if providers.oqsprovider.is_some() {
+                openssl_mod.add("_oqsprovider_loaded", true)?;
+            } else {
+                openssl_mod.add("_oqsprovider_loaded", false)?;
+            }
             openssl_mod.add("_providers", providers)?;
 
             openssl_mod.add_function(pyo3::wrap_pyfunction_bound!(enable_fips, &openssl_mod)?)?;
@@ -175,11 +201,11 @@ fn _rust(py: pyo3::Python<'_>, m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> py
 
 #[cfg(test)]
 mod tests {
-    use super::_legacy_provider_error;
+    use super::_provider_error;
 
     #[test]
-    fn test_legacy_provider_error() {
-        assert!(_legacy_provider_error(true).is_ok());
-        assert!(_legacy_provider_error(false).is_err());
+    fn test_provider_error() {
+        assert!(_provider_error("legacy", true).is_ok());
+        assert!(_provider_error("oqsprovider", false).is_err());
     }
 }
