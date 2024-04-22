@@ -371,7 +371,7 @@ class Backend:
         return (
             rust_openssl.CRYPTOGRAPHY_OPENSSL_320_OR_GREATER
             and not self._fips_enabled
-            and rust_openssl._legacy_provider_loaded
+            and rust_openssl._oqsprovider_loaded
         )
 
     def _zero_data(self, data, length: int) -> None:

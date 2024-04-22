@@ -11,9 +11,9 @@ from cryptography.hazmat.bindings._rust import openssl as rust_openssl
 from cryptography.hazmat.primitives import _serialization
 
 
-class MLDSA65PublicKey(metaclass=abc.ABCMeta):
+class MlDsa65PublicKey(metaclass=abc.ABCMeta):
     @classmethod
-    def from_public_bytes(cls, data: bytes) -> MLDSA65PublicKey:
+    def from_public_bytes(cls, data: bytes) -> MlDsa65PublicKey:
         from cryptography.hazmat.backends.openssl.backend import backend
 
         if not backend.mldsa65_supported():
@@ -54,12 +54,12 @@ class MLDSA65PublicKey(metaclass=abc.ABCMeta):
         """
 
 
-MLDSA65PublicKey.register(rust_openssl.mldsa65.MLDSA65PublicKey)
+MlDsa65PublicKey.register(rust_openssl.mldsa65.MlDsa65PublicKey)
 
 
-class MLDSA65PrivateKey(metaclass=abc.ABCMeta):
+class MlDsa65PrivateKey(metaclass=abc.ABCMeta):
     @classmethod
-    def generate(cls) -> MLDSA65PrivateKey:
+    def generate(cls) -> MlDsa65PrivateKey:
         from cryptography.hazmat.backends.openssl.backend import backend
 
         if not backend.mldsa65_supported():
@@ -71,7 +71,7 @@ class MLDSA65PrivateKey(metaclass=abc.ABCMeta):
         return rust_openssl.mldsa65.generate_key()
 
     @classmethod
-    def from_private_bytes(cls, data: bytes) -> MLDSA65PrivateKey:
+    def from_private_bytes(cls, data: bytes) -> MlDsa65PrivateKey:
         from cryptography.hazmat.backends.openssl.backend import backend
 
         if not backend.mldsa65_supported():
@@ -83,9 +83,9 @@ class MLDSA65PrivateKey(metaclass=abc.ABCMeta):
         return rust_openssl.mldsa65.from_private_bytes(data)
 
     @abc.abstractmethod
-    def public_key(self) -> MLDSA65PublicKey:
+    def public_key(self) -> MlDsa65PublicKey:
         """
-        The MLDSA65PublicKey derived from the private key.
+        The MlDsa65PublicKey derived from the private key.
         """
 
     @abc.abstractmethod
@@ -113,4 +113,4 @@ class MLDSA65PrivateKey(metaclass=abc.ABCMeta):
         """
 
 
-MLDSA65PrivateKey.register(rust_openssl.mldsa65.MLDSA65PrivateKey)
+MlDsa65PrivateKey.register(rust_openssl.mldsa65.MlDsa65PrivateKey)
